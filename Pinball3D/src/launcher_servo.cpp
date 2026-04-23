@@ -17,6 +17,12 @@ void LauncherServo::requestLaunch(uint32_t nowMs) {
   phaseStartMs_ = nowMs;
 }
 
+void LauncherServo::resetToRest() {
+  servo_.write(config_.servoRestAngle);
+  phase_ = Phase::Idle;
+  phaseStartMs_ = 0;
+}
+
 void LauncherServo::update(uint32_t nowMs) {
   switch (phase_) {
     case Phase::Idle:
@@ -37,4 +43,3 @@ void LauncherServo::update(uint32_t nowMs) {
 }
 
 bool LauncherServo::isBusy() const { return phase_ != Phase::Idle; }
-

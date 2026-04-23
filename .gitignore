@@ -1,0 +1,4 @@
+# Ignore editor and OS metadata
+**/.idea/
+*.iml
+backups/

@@ -11,6 +11,7 @@ class LauncherServo {
 
   void begin();
   void requestLaunch(uint32_t nowMs);
+  void resetToRest();
   void update(uint32_t nowMs);
   bool isBusy() const;
 
@@ -26,4 +27,3 @@ class LauncherServo {
   Phase phase_ = Phase::Idle;
   uint32_t phaseStartMs_ = 0;
 };
-

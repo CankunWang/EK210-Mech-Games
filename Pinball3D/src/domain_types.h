@@ -38,19 +38,25 @@ struct MotorCommand {
 };
 
 struct InputSnapshot {
-  uint16_t buttonRaw = 1023;
-  ButtonId activeButton = ButtonId::None;
-  bool buttonPressedEdge = false;
+  bool buttonDown[4] = {false, false, false, false};
+  bool buttonPressedEdge[4] = {false, false, false, false};
+  bool buttonReleasedEdge[4] = {false, false, false, false};
 
   uint16_t tcrtRaw[3] = {0, 0, 0};
   bool tcrtDetected[3] = {false, false, false};
   bool tcrtPassEdge[3] = {false, false, false};
+
+  bool breakBeamActive = false;
+  bool breakBeamEdge = false;
+
+  uint16_t ultrasonicDistanceCm = 0;
+  bool ultrasonicActive = false;
+  bool ultrasonicEdge = false;
 
   bool limitActive[4] = {false, false, false, false};
 };
 
 struct ScoreState {
   uint32_t score = 0;
-  uint8_t ballsLeft = 3;
   uint8_t combo = 0;
 };

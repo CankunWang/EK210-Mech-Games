@@ -1,26 +1,37 @@
 #include "ui_lcd.h"
 
+namespace {
+void clearLine(LiquidCrystal_I2C& lcd, uint8_t row) {
+  lcd.setCursor(0, row);
+  lcd.print(F("                "));
+  lcd.setCursor(0, row);
+}
+}
+
 UiLcd::UiLcd(const AppConfig& config)
-#if PINBALL_LCD_AVAILABLE
     : config_(config), lcd_(config.lcdAddress, config.lcdCols, config.lcdRows) {}
-#else
-    : config_(config) {}
-#endif
+
+void UiLcd::showStart(const ScoreState& score, uint32_t nowMs) {
+  clearLine(lcd_, 0);
+  lcd_.print(F("S:"));
+  lcd_.print(score.score);
+
+  clearLine(lcd_, 1);
+  lcd_.print(F("GAME START"));
+
+  lastRenderMs_ = nowMs;
+}
 
 void UiLcd::begin() {
   if (config_.serialDebug) {
     Serial.begin(config_.serialBaud);
   }
 
-#if PINBALL_LCD_AVAILABLE
   lcd_.init();
   lcd_.backlight();
   lcd_.clear();
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("Pinball Booting"));
-  lcd_.setCursor(0, 1);
-  lcd_.print(F("A0 Btn / A1-3 IR"));
-#endif
+  ScoreState bootScore;
+  showStart(bootScore, 0);
 }
 
 void UiLcd::render(GameState gameState, const ScoreState& score,
@@ -30,28 +41,34 @@ void UiLcd::render(GameState gameState, const ScoreState& score,
   }
   lastRenderMs_ = nowMs;
 
-#if PINBALL_LCD_AVAILABLE
-  lcd_.setCursor(0, 0);
-  lcd_.print(F("S:"));
-  lcd_.print(score.score);
-  lcd_.print(F(" B:"));
-  lcd_.print(score.ballsLeft);
-  lcd_.print(F("   "));
+  if (gameState == GameState::Idle || gameState == GameState::Ready) {
+    showStart(score, nowMs);
+  } else {
+    clearLine(lcd_, 0);
+    lcd_.print(F("S:"));
+    lcd_.print(score.score);
 
-  lcd_.setCursor(0, 1);
-  lcd_.print(stateToLabel(gameState));
-  lcd_.print(F(" C:"));
-  lcd_.print(score.combo);
-  lcd_.print(F("     "));
-#endif
+    clearLine(lcd_, 1);
+    lcd_.print(stateToLabel(gameState));
+  }
 
   if (config_.serialDebug) {
+    uint8_t buttonMask = 0;
+    for (uint8_t i = 0; i < 4; ++i) {
+      if (inputs.buttonDown[i]) {
+        buttonMask |= (1 << i);
+      }
+    }
     Serial.print(F("[UI] state="));
     Serial.print(static_cast<uint8_t>(gameState));
-    Serial.print(F(" btn="));
-    Serial.print(static_cast<uint8_t>(inputs.activeButton));
+    Serial.print(F(" btnMask=0x"));
+    Serial.print(buttonMask, HEX);
     Serial.print(F(" score="));
     Serial.print(score.score);
+    Serial.print(F(" bb="));
+    Serial.print(inputs.breakBeamActive);
+    Serial.print(F(" us="));
+    Serial.print(inputs.ultrasonicDistanceCm);
     Serial.print(F(" tcrt="));
     Serial.print(inputs.tcrtRaw[0]);
     Serial.print(',');
@@ -64,16 +81,15 @@ void UiLcd::render(GameState gameState, const ScoreState& score,
 const __FlashStringHelper* UiLcd::stateToLabel(GameState state) const {
   switch (state) {
     case GameState::Idle:
-      return F("IDLE");
+      return F("GAME START");
     case GameState::Ready:
-      return F("READY");
+      return F("GAME START");
     case GameState::Playing:
-      return F("PLAY");
+      return F("PLAYING");
     case GameState::BallLost:
-      return F("BALL LOST");
+      return F("GAME OVER");
     case GameState::GameOver:
       return F("GAME OVER");
   }
   return F("UNKNOWN");
 }
-
