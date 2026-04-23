@@ -1,39 +1,79 @@
-# EK210 Mech Games - Arduino Architecture Skeleton
+# EK210 Mech Games - 3D Pinball
 
-This repository now contains a modular Arduino sketch scaffold for the 3D pinball project.
+This project uses a split-board Arduino setup:
 
-## File Layout
+- Arduino Mega: main controller for game logic, buttons, sensors, scoring, and LCD.
+- Arduino Uno: actuator controller for flipper servos, push servo, and launcher motors.
 
-- `Pinball3D.ino`: app entrypoint (`setup/loop`)
-- `src/pins_config.h`: all pin mapping and tunable constants
-- `src/domain_types.h`: shared enums and data structs
-- `src/input_manager.*`: buttons (A0 ladder), TCRT5000 (A1-A3), limit switches
-- `src/motor_driver.*`: DRV8833 motor control wrapper (4 motors)
-- `src/launcher_servo.*`: launch servo state machine
-- `src/score_rules.*`: score/combo/ball counters
-- `src/ui_lcd.*`: LCD render layer (with optional Serial debug)
-- `src/game_fsm.*`: top-level game state machine and orchestration
+## Required Uploads
 
-## Important Pin Notes
+Program both boards before running the full system.
 
-- Config follows your latest constraints:
-  - `A0` -> 4-button resistor ladder
-  - `A1/A2/A3` -> 3x TCRT5000 `AO` (analog outputs)
-  - LCD uses I2C pins (`SDA/SCL`)
-- TCRT5000 module model in code:
-  - per sensor: `VCC/GND/AO/DO` hardware model
-  - `detectMode` can be `AnalogThreshold` or `DigitalPin`
-  - event output is `tcrtPassEdge[]` ("ball passed")
-- Default mapping in `pins_config.h` uses `D0` for one limit switch to fit all I/O.
-  - If upload/serial becomes unstable, remap pins or move one input through hardware expansion.
-- Motor role mapping in code:
-  - `motor0/motor1`: launcher motors (hold launch button to keep running)
-  - `motor2/motor3`: flipper motors (press button3 once => one swing + reset cycle)
-  - each motor action is blocked by its paired limit switch
+### Arduino Mega
 
-## Next Steps
+Upload this sketch to the Mega:
 
-1. Calibrate `buttonLadder` voltage bands.
-2. Calibrate each sensor `analogThreshold` (or wire `DO` and set `detectMode=DigitalPin`).
-3. Replace placeholder motor policies in `game_fsm.cpp` with your exact gameplay behavior.
-4. Confirm final DRV8833 pin map against physical wiring.
+- `Pinball3D/Pinball3D.ino`
+
+The Mega handles:
+
+- Four buttons
+- TCRT5000 score sensors
+- Ultrasonic bottom detection
+- LCD display
+- Game state and scoring
+- Serial commands to the actuator Uno
+
+### Arduino Uno
+
+Upload this sketch to the Uno:
+
+- `tests/uno_actuator_controller/uno_actuator_controller.ino`
+
+The Uno handles:
+
+- Left flipper servo
+- Right flipper servo
+- Push servo
+- Launcher DC motors through DRV8833
+
+## Mega to Uno Serial Wiring
+
+- Mega `TX1` / `D18` -> Uno `RX` / `D0`
+- Mega `RX1` / `D19` -> Uno `TX` / `D1`
+- Mega `GND` -> Uno `GND`
+
+The shared ground is required for reliable serial communication.
+
+## Current Main Pin Map
+
+### Mega
+
+- `A0` -> Button 1, left flipper
+- `A1` -> Button 2, right flipper
+- `A2` -> Button 3, push servo
+- `A3` -> Button 4, launcher and game start
+- `D20` -> LCD SDA
+- `D21` -> LCD SCL
+- `D22` -> TCRT5000 #1 DO, 200 points
+- `D23` -> TCRT5000 #2 DO, 150 points
+- `D24` -> TCRT5000 #3 DO, 100 points
+- `D26` -> Ultrasonic TRIG
+- `D27` -> Ultrasonic ECHO
+
+### Uno Actuator Controller
+
+- `D7` -> Left flipper servo
+- `D8` -> Right flipper servo
+- `D10` -> Push servo
+- `D3` -> Launcher DRV8833 motor A IN1
+- `D5` -> Launcher DRV8833 motor A IN2
+- `D6` -> Launcher DRV8833 motor B IN1
+- `D11` -> Launcher DRV8833 motor B IN2
+
+## Notes
+
+- The `backups/` directory is intentionally ignored by Git.
+- The Mega sketch is the full game program.
+- The Uno sketch is only the actuator receiver/controller.
+- Uploading only one board is not enough for the full system.
